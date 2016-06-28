@@ -10,6 +10,7 @@ void ImgProc::Init(Local<Object> target) {
   Nan::SetMethod(obj, "initUndistortRectifyMap", InitUndistortRectifyMap);
   Nan::SetMethod(obj, "remap", Remap);
   Nan::SetMethod(obj, "getStructuringElement", GetStructuringElement);
+  Nan::SetMethod(obj, "getGaborKernel", GetGaborKernel);
 
   target->Set(Nan::New("imgproc").ToLocalChecked(), obj);
 }
@@ -186,6 +187,45 @@ NAN_METHOD(ImgProc::GetStructuringElement) {
 
     // GetStructuringElement
     cv::Mat mat = cv::getStructuringElement(shape, ksize);
+
+    // Wrap the output image
+    Local<Object> outMatrixWrap = Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
+    Matrix *outMatrix = ObjectWrap::Unwrap<Matrix>(outMatrixWrap);
+    outMatrix->mat = mat;
+
+    // Return the image
+    info.GetReturnValue().Set(outMatrixWrap);
+  } catch (cv::Exception &e) {
+    const char *err_msg = e.what();
+    JSTHROW(err_msg);
+    return;
+  }
+}
+
+// cv::getGaborKernel
+NAN_METHOD(ImgProc::GetGaborKernel) {
+  Nan::EscapableHandleScope scope;
+
+  try {
+    // Get the arguments
+
+    if (info.Length() != 7) {
+      Nan::ThrowTypeError("Invalid number of arguments");
+    }
+
+    //TODO throw error if wrong types for arguments passed
+    cv::Size ksize;
+    Local<Object> v8sz = info[0]->ToObject();
+    ksize = cv::Size(v8sz->Get(0)->IntegerValue(), v8sz->Get(1)->IntegerValue());
+
+    double sigma = info[1]->NumberValue();
+    double theta = info[2]->NumberValue();
+    double lambda = info[3]->NumberValue();
+    double gamma = info[4]->NumberValue();
+    double psi = info[5]->NumberValue();
+
+    // GetStructuringElement
+    cv::Mat mat = cv::getGaborKernel(ksize, sigma, theta, lambda, gamma, psi, CV_32FC1);
 
     // Wrap the output image
     Local<Object> outMatrixWrap = Nan::New(Matrix::constructor)->GetFunction()->NewInstance();
